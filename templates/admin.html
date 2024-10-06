@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель администратора</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Панель администратора</h1>
+    
+    <form method="POST" action="/grant_admin">
+        <label>Выдать админку пользователю:</label>
+        <input type="text" name="username" required>
+        <button type="submit">Выдать</button>
+    </form>
+    
+    <form method="POST" action="/ban_user">
+        <label>Забанить пользователя:</label>
+        <input type="text" name="username" required>
+        <button type="submit">Забанить</button>
+    </form>
+
+    <form method="POST" action="/unban_user">
+        <label>Разбанить пользователя:</label>
+        <input type="text" name="username" required>
+        <button type="submit">Разбанить</button>
+    </form>
+
+    <form method="POST" action="/revoke_admin">
+        <label>Разжаловать администратора:</label>
+        <input type="text" name="username" required>
+        <button type="submit">Разжаловать</button>
+    </form>
+
+    <a href="/">Назад в меню</a>
+</body>
+</html>
