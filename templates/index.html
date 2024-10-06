@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Главное меню</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Добро пожаловать, {{ session['username'] }}!</h1>
+        <p>Ваши токены: {{ tokens }}</p>  <!-- Показатель токенов -->
+        <p>Ваш уровень: {{ level }}</p>    <!-- Показатель уровня -->
+
+        <form action="/get_token" method="POST">
+    <button type="submit" class="button">Заработать токены</button>
+</form>
+
+        <form action="/logout" method="POST">
+    <button type="submit" class="button">Выйти</button>  <!-- Кнопка для выхода -->
+</form>
+
+    </div>
+</body>
+</html>
