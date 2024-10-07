@@ -236,6 +236,12 @@ def make_admin():
 def download_file(filename):
     return send_from_directory('directory_with_files', filename)
 
+@app.route('/list-files', methods=['GET'])
+def list_files():
+    files = os.listdir(UPLOAD_FOLDER)
+    return '<br>'.join(files)  # Возвращает список файлов в виде HTML
+    
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
