@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, send_from_directory
+from flask import Flask, render_template, request, redirect, session, send_from_directory, render_template_string
 import sqlite3
 import os
 
@@ -160,89 +160,41 @@ def grant_admin():
             conn.commit()
             return redirect('/admin')
         
-        # Если GET запрос, можно показать страницу с формой
         return render_template('grant_admin.html')
     else:
         return "Доступ запрещен", 403
 
+# Маршрут для отображения списка пользователей
+@app.route('/users', methods=['GET'])
+def list_users():
+    cursor.execute("SELECT id, username, level, tokens FROM users")
+    users = cursor.fetchall()
 
-# Забанить пользователя
-@app.route('/ban_user', methods=['POST'])
-def ban_user():
-    if 'username' not in session:
-        return redirect('/login')
+    html = '''
+    <h1>Список пользователей</h1>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Имя пользователя</th>
+            <th>Уровень</th>
+            <th>Токены</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            <td>{{ user['id'] }}</td>
+            <td>{{ user['username'] }}</td>
+            <td>{{ user['level'] }}</td>
+            <td>{{ user['tokens'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    '''
+    return render_template_string(html, users=users)
 
-    username = session['username']
-    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
-    is_admin = cursor.fetchone()[0]
-
-    if is_admin == 1:
-        user_to_ban = request.form['username']
-        cursor.execute("UPDATE users SET is_banned = 1 WHERE username = ?", (user_to_ban,))
-        conn.commit()
-        return redirect('/admin')
-    else:
-        return "Доступ запрещен", 403
-
-
-# Разбанить пользователя
-@app.route('/unban_user', methods=['POST'])
-def unban_user():
-    if 'username' not in session:
-        return redirect('/login')
-
-    username = session['username']
-    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
-    is_admin = cursor.fetchone()[0]
-
-    if is_admin == 1:
-        user_to_unban = request.form['username']
-        cursor.execute("UPDATE users SET is_banned = 0 WHERE username = ?", (user_to_unban,))
-        conn.commit()
-        return redirect('/admin')
-    else:
-        return "Доступ запрещён ", 403
-
-
-# Разжаловать администратора
-@app.route('/revoke_admin', methods=['POST'])
-def revoke_admin():
-    if 'username' not in session:
-        return redirect('/login')
-
-    username = session['username']
-    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
-    is_admin = cursor.fetchone()[0]
-
-    if is_admin == 1:
-        user_to_revoke = request.form['username']
-        cursor.execute("UPDATE users SET is_admin = 0 WHERE username = ?", (user_to_revoke,))
-        conn.commit()
-        return redirect('/admin')
-    else:
-        return "Доступ запрещен", 403
-        
-        
-@app.route('/make_admin')
-def make_admin():
-    if 'username' not in session:
-        return redirect('/login')
-
-    username = session['username']
-    cursor.execute("UPDATE users SET is_admin = 1 WHERE username = ?", (username,))
-    conn.commit()
-    return "Вы теперь администратор!"
-
+# Скачать файл
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory('directory_with_files', filename)
-
-@app.route('/list-files', methods=['GET'])
-def list_files():
-    files = os.listdir(UPLOAD_FOLDER)
-    return '<br>'.join(files)  # Возвращает список файлов в виде HTML
-    
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
