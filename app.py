@@ -164,6 +164,24 @@ def grant_admin():
     else:
         return "Доступ запрещен", 403
 
+# Разжаловать администратора
+@app.route('/revoke_admin', methods=['POST'])
+def revoke_admin():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
+    is_admin = cursor.fetchone()[0]
+
+    if is_admin == 1:
+        user_to_revoke = request.form['username']
+        cursor.execute("UPDATE users SET is_admin = 0 WHERE username = ?", (user_to_revoke,))
+        conn.commit()
+        return redirect('/admin')
+    else:
+        return "Доступ запрещен", 403
+
 # Маршрут для отображения списка пользователей
 @app.route('/users', methods=['GET'])
 def list_users():
@@ -228,3 +246,4 @@ def leaderboard():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+    
