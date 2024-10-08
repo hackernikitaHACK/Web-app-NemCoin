@@ -185,7 +185,8 @@ def revoke_admin():
 # Маршрут для отображения списка пользователей
 @app.route('/users', methods=['GET'])
 def list_users():
-    cursor.execute("SELECT id, username, level, tokens FROM users")
+    # Сортируем пользователей по токенам и уровню
+    cursor.execute("SELECT id, username, level, tokens FROM users ORDER BY tokens DESC, level DESC")
     users = cursor.fetchall()
 
     html = '''
@@ -208,6 +209,7 @@ def list_users():
     </table>
     '''
     return render_template_string(html, users=users)
+    
 
 # Скачать файл
 @app.route('/download/<filename>')
