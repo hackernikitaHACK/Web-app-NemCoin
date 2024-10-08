@@ -190,7 +190,7 @@ def list_users():
     users = cursor.fetchall()
 
     html = '''
-    <h1>Список пользователей</h1>
+    <h1>Рейтинг (таблица лидеров)</h1>
     <table border="1">
         <tr>
             <th>ID</th>
