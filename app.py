@@ -24,6 +24,40 @@ CREATE TABLE IF NOT EXISTS users (
 ''')
 conn.commit()
 
+# Создание таблицы майнеров (если её ещё нет)
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS miners (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    price INTEGER NOT NULL,
+    production_rate INTEGER NOT NULL
+)
+''')
+conn.commit()
+
+# Создание таблицы для хранения майнеров, купленных пользователями
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS user_miners (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    miner_id INTEGER NOT NULL,
+    FOREIGN KEY (username) REFERENCES users(username),
+    FOREIGN KEY (miner_id) REFERENCES miners(id)
+)
+''')
+conn.commit()
+
+# Добавление майнеров в базу данных (если их ещё нет)
+miners = [
+    ('Basic Miner', 100, 1),
+    ('Advanced Miner', 500, 5),
+    ('Pro Miner', 1000, 10)
+]
+cursor.executemany('''
+INSERT INTO miners (name, price, production_rate) VALUES (?, ?, ?)
+''', miners)
+conn.commit()
+
 # Функция для расчета, сколько токенов нужно для следующего уровня
 def tokens_for_next_level(current_level):
     return 50 * current_level
@@ -74,7 +108,6 @@ def login():
         return redirect('/')
     
     return render_template('login.html')
-
 
 # Маршрут для выхода
 @app.route('/logout', methods=['POST'])
@@ -127,6 +160,51 @@ def get_token():
     conn.commit()
 
     return redirect('/')
+
+# Магазин майнеров
+@app.route('/shop', methods=['GET', 'POST'])
+def shop():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+    
+    if request.method == 'POST':
+        miner_id = request.form['miner_id']
+
+        # Получаем информацию о выбранном майнере
+        cursor.execute("SELECT name, price, production_rate FROM miners WHERE id = ?", (miner_id,))
+        miner = cursor.fetchone()
+
+        if miner is None:
+            return "Майнер не найден", 404
+
+        miner_name, miner_price, miner_production_rate = miner
+
+        # Получаем текущие токены пользователя
+        cursor.execute("SELECT tokens FROM users WHERE username = ?", (username,))
+        user_tokens = cursor.fetchone()[0]
+
+        # Проверяем, достаточно ли токенов для покупки
+        if user_tokens < miner_price:
+            return "Недостаточно токенов для покупки", 403
+
+        # Списываем токены за майнер
+        new_token_balance = user_tokens - miner_price
+        cursor.execute("UPDATE users SET tokens = ? WHERE username = ?", (new_token_balance, username))
+        conn.commit()
+
+        # Добавляем майнер пользователю
+        cursor.execute("INSERT INTO user_miners (username, miner_id) VALUES (?, ?)", (username, miner_id))
+        conn.commit()
+
+        return redirect('/shop')
+
+    # Получаем список всех майнеров для отображения в магазине
+    cursor.execute("SELECT id, name, price, production_rate FROM miners")
+    miners = cursor.fetchall()
+
+    return render_template('shop.html', miners=miners)
 
 # Панель администратора
 @app.route('/admin')
@@ -209,7 +287,6 @@ def list_users():
     </table>
     '''
     return render_template_string(html, users=users)
-    
 
 # Скачать файл
 @app.route('/download/<filename>')
@@ -248,4 +325,3 @@ def leaderboard():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
