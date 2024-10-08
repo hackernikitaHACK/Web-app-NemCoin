@@ -13,13 +13,19 @@
         <p>Ваш уровень: {{ level }}</p>    <!-- Показатель уровня -->
 
         <form action="/get_token" method="POST">
-    <button type="submit" class="button">Заработать токены</button>
-</form>
+            <button type="submit" class="button">Заработать токены</button>
+        </form>
 
         <form action="/logout" method="POST">
-    <button type="submit" class="button">Выйти</button>  <!-- Кнопка для выхода -->
-</form>
+            <button type="submit" class="button">Выйти</button>  <!-- Кнопка для выхода -->
+        </form>
 
+        <!-- Кнопка для панели администратора, если пользователь — админ -->
+        {% if is_admin %}
+        <form action="/admin" method="GET">
+            <button type="submit" class="button">Панель администратора</button>  <!-- Кнопка для админки -->
+        </form>
+        {% endif %}
     </div>
 </body>
 </html>
