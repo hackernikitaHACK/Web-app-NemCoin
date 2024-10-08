@@ -3,30 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Магазин майнеров</title>
+    <title>Магазин Майнеров</title>
 </head>
 <body>
-    <h1>Магазин майнеров</h1>
-    <table border="1">
-        <tr>
-            <th>Название</th>
-            <th>Цена</th>
-            <th>Производительность</th>
-            <th>Действие</th>
-        </tr>
-        {% for miner in miners %}
-        <tr>
-            <td>{{ miner['name'] }}</td>
-            <td>{{ miner['price'] }}</td>
-            <td>{{ miner['production_rate'] }}</td>
-            <td>
-                <form action="/shop" method="POST">
-                    <input type="hidden" name="miner_id" value="{{ miner['id'] }}">
-                    <button type="submit">Купить</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+    <h1>Магазин Майнеров</h1>
+    <p>У вас {{ current_tokens }} токенов.</p>
+
+    <form method="POST">
+        <label for="miner_type">Выберите майнера:</label>
+        <select name="miner_type" id="miner_type">
+            {% for miner in miners %}
+            <option value="{{ miner.type }}">{{ miner.type }} (Скорость: {{ miner.rate }} токенов/минуту, Цена: {{ miner.price }} токенов)</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Купить</button>
+    </form>
 </body>
 </html>
