@@ -196,6 +196,35 @@ def list_users():
 def download_file(filename):
     return send_from_directory('directory_with_files', filename)
 
+# Маршрут для таблицы лидеров
+@app.route('/leaderboard', methods=['GET'])
+def leaderboard():
+    # Получаем всех пользователей, сортируя по количеству токенов или уровню
+    cursor.execute("SELECT id, username, level, tokens FROM users ORDER BY tokens DESC, level DESC")
+    users = cursor.fetchall()
+
+    # HTML-шаблон для отображения таблицы лидеров
+    html = '''
+    <h1>Таблица лидеров</h1>
+    <table border="1">
+        <tr>
+            <th>Место</th>
+            <th>Имя пользователя</th>
+            <th>Уровень</th>
+            <th>Токены</th>
+        </tr>
+        {% for index, user in enumerate(users, start=1) %}
+        <tr>
+            <td>{{ index }}</td>
+            <td>{{ user['username'] }}</td>
+            <td>{{ user['level'] }}</td>
+            <td>{{ user['tokens'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    '''
+    return render_template_string(html, users=users)
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
