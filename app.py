@@ -1,8 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, send_from_directory, render_template_string
 import sqlite3
 import os
-import threading
-import time
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -64,42 +62,6 @@ conn.commit()
 def tokens_for_next_level(current_level):
     return 50 * current_level
 
-# Функция для начисления токенов за майнеров
-def generate_tokens_for_miners():
-    cursor.execute('SELECT username FROM users')
-    users = cursor.fetchall()
-
-    for user in users:
-        username = user['username']
-
-        # Получаем майнеров пользователя
-        cursor.execute('''
-            SELECT SUM(m.production_rate) AS total_rate 
-            FROM user_miners um
-            JOIN miners m ON um.miner_id = m.id
-            WHERE um.username = ?
-        ''', (username,))
-        total_rate = cursor.fetchone()['total_rate'] or 0
-
-        # Начисляем токены пользователю
-        if total_rate > 0:
-            cursor.execute('UPDATE users SET tokens = tokens + ? WHERE username = ?', (total_rate, username))
-    
-    conn.commit()
-
-# Запуск начисления токенов каждые N секунд
-def start_token_generation():
-    def token_loop():
-        while True:
-            generate_tokens_for_miners()
-            time.sleep(60)  # Начисление токенов каждые 60 секунд
-
-    thread = threading.Thread(target=token_loop)
-    thread.daemon = True
-    thread.start()
-
-start_token_generation()
-
 # Маршрут для главной страницы
 @app.route('/')
 def home():
@@ -147,6 +109,12 @@ def login():
     
     return render_template('login.html')
 
+# Маршрут для выхода
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.pop('username', None)
+    return redirect('/login')
+
 # Маршрут для регистрации
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -162,6 +130,37 @@ def register():
             return "Имя пользователя уже занято"
 
     return render_template('register.html')
+
+@app.route('/get_token', methods=['GET', 'POST'])
+def get_token():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+    
+    # Получаем текущие токены и уровень пользователя
+    cursor.execute("SELECT tokens, level FROM users WHERE username = ?", (username,))
+    user_data = cursor.fetchone()
+    current_tokens, current_level = user_data
+    
+    # Увеличиваем количество токенов
+    new_tokens = current_tokens + 1
+    
+    # Проверяем, нужно ли повысить уровень
+    tokens_needed = tokens_for_next_level(current_level)
+    
+    if new_tokens >= tokens_needed:
+        # Увеличиваем уровень и сбрасываем токены
+        current_level += 1
+        new_tokens = 0
+    
+    # Обновляем пользователя в базе данных
+    cursor.execute("UPDATE users SET tokens = ?, level = ? WHERE username = ?", (new_tokens, current_level, username))
+    conn.commit()
+
+    return redirect('/')
+    
+
 
 # Магазин майнеров
 @app.route('/shop', methods=['GET', 'POST'])
@@ -207,6 +206,122 @@ def shop():
     miners = cursor.fetchall()
 
     return render_template('shop.html', miners=miners)
+
+# Панель администратора
+@app.route('/admin')
+def admin_panel():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
+    is_admin = cursor.fetchone()[0]
+
+    if is_admin == 1:
+        return render_template('admin.html')
+    else:
+        return "Доступ запрещен", 403
+
+# Выдать админку
+@app.route('/grant_admin', methods=['GET', 'POST'])
+def grant_admin():
+    if 'username' not in session:
+        return redirect('/login')
+    
+    username = session['username']
+    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
+    is_admin = cursor.fetchone()[0]
+
+    if is_admin == 1:
+        if request.method == 'POST':
+            user_to_grant = request.form['username']
+            cursor.execute("UPDATE users SET is_admin = 1 WHERE username = ?", (user_to_grant,))
+            conn.commit()
+            return redirect('/admin')
+        
+        return render_template('grant_admin.html')
+    else:
+        return "Доступ запрещен", 403
+
+# Разжаловать администратора
+@app.route('/revoke_admin', methods=['POST'])
+def revoke_admin():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
+    is_admin = cursor.fetchone()[0]
+
+    if is_admin == 1:
+        user_to_revoke = request.form['username']
+        cursor.execute("UPDATE users SET is_admin = 0 WHERE username = ?", (user_to_revoke,))
+        conn.commit()
+        return redirect('/admin')
+    else:
+        return "Доступ запрещен", 403
+
+# Маршрут для отображения списка пользователей
+@app.route('/users', methods=['GET'])
+def list_users():
+    # Сортируем пользователей по токенам и уровню
+    cursor.execute("SELECT id, username, level, tokens FROM users ORDER BY tokens DESC, level DESC")
+    users = cursor.fetchall()
+
+    html = '''
+    <h1>Рейтинг (таблица лидеров)</h1>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Имя пользователя</th>
+            <th>Уровень</th>
+            <th>Токены</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            <td>{{ user['id'] }}</td>
+            <td>{{ user['username'] }}</td>
+            <td>{{ user['level'] }}</td>
+            <td>{{ user['tokens'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    '''
+    return render_template_string(html, users=users)
+
+# Скачать файл
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory('directory_with_files', filename)
+
+# Маршрут для таблицы лидеров
+@app.route('/leaderboard', methods=['GET'])
+def leaderboard():
+    # Получаем всех пользователей, сортируя по количеству токенов или уровню
+    cursor.execute("SELECT id, username, level, tokens FROM users ORDER BY tokens DESC, level DESC")
+    users = cursor.fetchall()
+
+    # HTML-шаблон для отображения таблицы лидеров
+    html = '''
+    <h1>Таблица лидеров</h1>
+    <table border="1">
+        <tr>
+            <th>Место</th>
+            <th>Имя пользователя</th>
+            <th>Уровень</th>
+            <th>Токены</th>
+        </tr>
+        {% for index, user in enumerate(users, start=1) %}
+        <tr>
+            <td>{{ index }}</td>
+            <td>{{ user['username'] }}</td>
+            <td>{{ user['level'] }}</td>
+            <td>{{ user['tokens'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    '''
+    return render_template_string(html, users=users)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
