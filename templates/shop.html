@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Магазин майнеров</title>
+</head>
+<body>
+    <h1>Магазин майнеров</h1>
+    <table border="1">
+        <tr>
+            <th>Название</th>
+            <th>Цена</th>
+            <th>Производительность</th>
+            <th>Действие</th>
+        </tr>
+        {% for miner in miners %}
+        <tr>
+            <td>{{ miner['name'] }}</td>
+            <td>{{ miner['price'] }}</td>
+            <td>{{ miner['production_rate'] }}</td>
+            <td>
+                <form action="/shop" method="POST">
+                    <input type="hidden" name="miner_id" value="{{ miner['id'] }}">
+                    <button type="submit">Купить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
