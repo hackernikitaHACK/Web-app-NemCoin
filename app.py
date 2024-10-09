@@ -112,6 +112,11 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        
+        # Проверка, что поля не пустые
+        if not username or not password:
+            flash('Имя пользователя и пароль обязательны.')
+            return redirect('/register')
 
         # Проверка на существующего пользователя
         cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
@@ -122,13 +127,15 @@ def register():
             return redirect('/register')
 
         # Добавление нового пользователя без хеширования пароля
-        cursor.execute("INSERT INTO users (username, password, last_mining_time) VALUES (?, ?, ?)", 
-                       (username, password, int(time.time())))
+        cursor.execute("INSERT INTO users (username, password, tokens, level, last_mining_time) VALUES (?, ?, ?, ?, ?)", 
+                       (username, password, 0, 1, int(time.time())))
         conn.commit()
+
         flash('Вы успешно зарегистрировались! Теперь войдите в систему.')
         return redirect('/login')
 
     return render_template('register.html')
+    
 
 # Маршрут для входа в систему
 @app.route('/login', methods=['GET', 'POST'])
