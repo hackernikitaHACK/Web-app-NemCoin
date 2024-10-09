@@ -398,23 +398,28 @@ def get_token():
 
     tokens, last_mining_time = user_data['tokens'], user_data['last_mining_time']
 
-    # Проверяем, прошло ли больше 60 секунд с последнего начисления токенов
     current_time = int(time.time())
-    if current_time - last_mining_time >= 60:
-        # Начисляем токены (например, 1 токен за раз)
+    time_difference = current_time - last_mining_time
+
+    print(f"Текущие токены: {tokens}, последнее начисление: {last_mining_time}, текущая разница: {time_difference} секунд")
+
+    # Проверяем, прошло ли больше 60 секунд с последнего начисления токенов
+    if time_difference >= 60:
         tokens += 1
-        
-        # Обновляем время последнего начисления и количество токенов в базе данных
         cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", 
                        (tokens, current_time, username))
         conn.commit()
+        print(f"Токены обновлены! Новое количество токенов: {tokens}")
+    else:
+        print(f"Прошло недостаточно времени для начисления токенов. Осталось {60 - time_difference} секунд.")
 
     return redirect('/')
-    
+                        
     
 
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
     
