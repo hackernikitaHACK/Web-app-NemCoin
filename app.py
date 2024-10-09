@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, send_from_directory, render_template_string
+from flask import Flask, render_template, request, redirect, session, send_from_directory, render_template_string, send_file
 import sqlite3
 import os
 
@@ -362,6 +362,16 @@ def leaderboard():
     </table>
     '''
     return render_template_string(html, users=users)
+
+
+# Маршрут для скачивания базы данных users.db
+@app.route('/download_db')
+def download_db():
+    try:
+        return send_file('users.db', as_attachment=True)
+    except Exception as e:
+        return str(e)
+        
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
