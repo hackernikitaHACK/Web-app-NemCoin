@@ -62,6 +62,7 @@ conn.commit()
 def tokens_for_next_level(current_level):
     return 50 * current_level
 
+
 # Маршрут для главной страницы
 @app.route('/')
 def home():
@@ -70,95 +71,39 @@ def home():
 
     username = session['username']
     
-    cursor.execute("SELECT tokens, level, is_admin FROM users WHERE username = ?", (username,))
+    # Получаем данные пользователя
+    cursor.execute("SELECT tokens, level, is_admin, last_mining_time FROM users WHERE username = ?", (username,))
     user_data = cursor.fetchone()
 
     if user_data is None:
         return redirect('/login')
 
-    tokens, level, is_admin = user_data
+    tokens, level, is_admin, last_mining_time = user_data
     tokens_needed = tokens_for_next_level(level)
 
+    # Получаем список всех майнеров, которыми владеет пользователь
+    cursor.execute('''
+        SELECT m.production_rate 
+        FROM user_miners um 
+        JOIN miners m ON um.miner_id = m.id 
+        WHERE um.username = ?
+    ''', (username,))
+    user_miners = cursor.fetchall()
+
+    # Суммируем производительность всех майнеров
+    total_production_rate = sum([miner['production_rate'] for miner in user_miners])
+
+    # Проверяем, прошло ли больше 60 секунд с последнего начисления токенов
+    current_time = int(time.time())  # Текущее время в секундах
+    if current_time - last_mining_time >= 60:
+        # Начисляем токены пользователю за все майнеры
+        tokens += total_production_rate
+        
+        # Обновляем время последнего начисления и количество токенов в базе данных
+        cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", (tokens, current_time, username))
+        conn.commit()
+
     return render_template('index.html', tokens=tokens, level=level, tokens_needed=tokens_needed, is_admin=is_admin)
-
-# Маршрут для входа
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-
-        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
-        user = cursor.fetchone()
-
-        if user is None:
-            return "Пользователь не найден", 404
-
-        # Проверяем, забанен ли пользователь
-        if user['is_banned'] == 1:
-            return "Вы забанены", 403
-
-        stored_password = user['password']
-
-        if password != stored_password:
-            return "Неверный пароль", 403
-
-        # Успешный вход
-        session['username'] = username
-        return redirect('/')
-    
-    return render_template('login.html')
-
-# Маршрут для выхода
-@app.route('/logout', methods=['POST'])
-def logout():
-    session.pop('username', None)
-    return redirect('/login')
-
-# Маршрут для регистрации
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-
-        try:
-            cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
-            conn.commit()
-            return redirect('/login')
-        except sqlite3.IntegrityError:
-            return "Имя пользователя уже занято"
-
-    return render_template('register.html')
-
-@app.route('/get_token', methods=['GET', 'POST'])
-def get_token():
-    if 'username' not in session:
-        return redirect('/login')
-
-    username = session['username']
-    
-    # Получаем текущие токены и уровень пользователя
-    cursor.execute("SELECT tokens, level FROM users WHERE username = ?", (username,))
-    user_data = cursor.fetchone()
-    current_tokens, current_level = user_data
-    
-    # Увеличиваем количество токенов
-    new_tokens = current_tokens + 1
-    
-    # Проверяем, нужно ли повысить уровень
-    tokens_needed = tokens_for_next_level(current_level)
-    
-    if new_tokens >= tokens_needed:
-        # Увеличиваем уровень и сбрасываем токены
-        current_level += 1
-        new_tokens = 0
-    
-    # Обновляем пользователя в базе данных
-    cursor.execute("UPDATE users SET tokens = ?, level = ? WHERE username = ?", (new_tokens, current_level, username))
-    conn.commit()
-
-    return redirect('/')
     
 
 
