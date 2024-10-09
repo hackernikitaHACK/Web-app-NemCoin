@@ -154,8 +154,9 @@ def login():
 # Маршрут для выхода из системы
 @app.route('/logout')
 def logout():
-    session.pop('username', None)
+    session.clear()  # Удаляем всю информацию о сессии
     return redirect('/login')
+    
 
 
 @app.route('/shop', methods=['GET', 'POST'])
@@ -369,9 +370,6 @@ def download_db():
         return str(e)
 
 
-# ... предыдущий код ...
-
-# Маршрут для получения токенов
 @app.route('/get_token', methods=['POST'])
 def get_token():
     if 'username' not in session:
@@ -388,19 +386,30 @@ def get_token():
 
     tokens, last_mining_time = user_data
 
+    # Получаем список всех майнеров, которыми владеет пользователь
+    cursor.execute('''
+        SELECT m.production_rate 
+        FROM user_miners um 
+        JOIN miners m ON um.miner_id = m.id 
+        WHERE um.username = ?
+    ''', (username,))
+    user_miners = cursor.fetchall()
+
+    # Суммируем производительность всех майнеров
+    total_production_rate = sum([miner['production_rate'] for miner in user_miners])
+
     # Проверяем, прошло ли больше 60 секунд с последнего начисления токенов
     current_time = int(time.time())
     if current_time - last_mining_time >= 60:
-        # Начисляем токены (например, 1 токен)
-        tokens += 1
+        # Начисляем токены за все майнеры
+        tokens += total_production_rate
         
         # Обновляем время последнего начисления и количество токенов в базе данных
         cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", (tokens, current_time, username))
         conn.commit()
 
     return redirect('/')
-
-# ... остальной код ...
+    
 
 
 if __name__ == '__main__':
