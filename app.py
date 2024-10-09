@@ -105,7 +105,57 @@ def home():
         conn.commit()
 
     return render_template('index.html', tokens=tokens, level=level, tokens_needed=tokens_needed, is_admin=is_admin)
-    
+
+# Маршрут для регистрации
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        # Проверка на существующего пользователя
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        existing_user = cursor.fetchone()
+
+        if existing_user:
+            flash('Это имя пользователя уже занято. Попробуйте другое.')
+            return redirect('/register')
+
+        # Добавление нового пользователя без хеширования пароля
+        cursor.execute("INSERT INTO users (username, password, last_mining_time) VALUES (?, ?, ?)", 
+                       (username, password, int(time.time())))
+        conn.commit()
+        flash('Вы успешно зарегистрировались! Теперь войдите в систему.')
+        return redirect('/login')
+
+    return render_template('register.html')
+
+# Маршрут для входа в систему
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        # Проверка имени пользователя и пароля
+        cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+        user = cursor.fetchone()
+
+        if user:
+            # Авторизация прошла успешно
+            session['username'] = username
+            return redirect('/')
+        else:
+            flash('Неправильное имя пользователя или пароль.')
+            return redirect('/login')
+
+    return render_template('login.html')
+
+# Маршрут для выхода из системы
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect('/login')
 
 
 @app.route('/shop', methods=['GET', 'POST'])
