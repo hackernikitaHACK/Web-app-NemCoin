@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    tokens INTEGER DEFAULT 0,
+    tokens INTEGER DEFAULT 49,
     level INTEGER DEFAULT 1,
     is_admin INTEGER DEFAULT 0,
     is_banned INTEGER DEFAULT 0
@@ -50,7 +50,7 @@ conn.commit()
 
 # Добавление майнеров в базу данных (если их ещё нет)
 miners = [
-    ('Basic Miner', 100, 1),
+    ('Basic Miner', 49, 1),
     ('Advanced Miner', 500, 5),
     ('Pro Miner', 1000, 10)
 ]
