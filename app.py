@@ -142,6 +142,10 @@ def login():
         user = cursor.fetchone()
 
         if user:
+            if user['is_banned']:
+                flash('Вы заблокированы.')
+                return redirect('/login')
+            
             # Авторизация прошла успешно
             session['username'] = username
             return redirect('/')
@@ -150,6 +154,7 @@ def login():
             return redirect('/login')
 
     return render_template('login.html')
+    
 
 # Маршрут для выхода из системы
 @app.route('/logout')
@@ -174,7 +179,7 @@ def shop():
             return "Ошибка: не выбран майнер", 400
 
         # Получаем информацию о выбранном майнере
-        cursor.execute("SELECT name, price, production_rate FROM miners WHERE id = ?", (miner_id,))
+        cursor.execute("SELECT name, price, roduction_rate FROM miners WHERE id = ?", (miner_id,))
         miner = cursor.fetchone()
 
         if miner is None:
