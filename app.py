@@ -162,7 +162,6 @@ def get_token():
     
 
 
-# Магазин майнеров
 @app.route('/shop', methods=['GET', 'POST'])
 def shop():
     if 'username' not in session:
@@ -171,7 +170,11 @@ def shop():
     username = session['username']
     
     if request.method == 'POST':
-        miner_id = request.form['miner_id']
+        # Проверка наличия miner_id в форме
+        miner_id = request.form.get('miner_id')
+
+        if not miner_id:
+            return "Ошибка: не выбран майнер", 400
 
         # Получаем информацию о выбранном майнере
         cursor.execute("SELECT name, price, production_rate FROM miners WHERE id = ?", (miner_id,))
@@ -206,6 +209,7 @@ def shop():
     miners = cursor.fetchall()
 
     return render_template('shop.html', miners=miners)
+    
 
 # Админ панель и управление пользователями
 @app.route('/admin')
