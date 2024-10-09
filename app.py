@@ -396,31 +396,21 @@ def get_token():
     if user_data is None:
         return redirect('/login')
 
-    tokens, last_mining_time = user_data
-
-    # Получаем список всех майнеров, которыми владеет пользователь
-    cursor.execute('''
-        SELECT m.production_rate 
-        FROM user_miners um 
-        JOIN miners m ON um.miner_id = m.id 
-        WHERE um.username = ?
-    ''', (username,))
-    user_miners = cursor.fetchall()
-
-    # Суммируем производительность всех майнеров
-    total_production_rate = sum([miner['production_rate'] for miner in user_miners])
+    tokens, last_mining_time = user_data['tokens'], user_data['last_mining_time']
 
     # Проверяем, прошло ли больше 60 секунд с последнего начисления токенов
     current_time = int(time.time())
     if current_time - last_mining_time >= 60:
-        # Начисляем токены за все майнеры
-        tokens += total_production_rate
+        # Начисляем токены (например, 1 токен за раз)
+        tokens += 1
         
         # Обновляем время последнего начисления и количество токенов в базе данных
-        cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", (tokens, current_time, username))
+        cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", 
+                       (tokens, current_time, username))
         conn.commit()
 
     return redirect('/')
+    
     
 
 
