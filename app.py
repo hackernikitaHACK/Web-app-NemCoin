@@ -317,7 +317,41 @@ def download_db():
         return send_file('users.db', as_attachment=True)
     except Exception as e:
         return str(e)
+
+
+# ... предыдущий код ...
+
+# Маршрут для получения токенов
+@app.route('/get_token', methods=['POST'])
+def get_token():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+
+    # Получаем данные пользователя
+    cursor.execute("SELECT tokens, last_mining_time FROM users WHERE username = ?", (username,))
+    user_data = cursor.fetchone()
+
+    if user_data is None:
+        return redirect('/login')
+
+    tokens, last_mining_time = user_data
+
+    # Проверяем, прошло ли больше 60 секунд с последнего начисления токенов
+    current_time = int(time.time())
+    if current_time - last_mining_time >= 60:
+        # Начисляем токены (например, 1 токен)
+        tokens += 1
         
+        # Обновляем время последнего начисления и количество токенов в базе данных
+        cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", (tokens, current_time, username))
+        conn.commit()
+
+    return redirect('/')
+
+# ... остальной код ...
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
