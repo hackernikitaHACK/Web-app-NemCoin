@@ -207,7 +207,7 @@ def shop():
 
     return render_template('shop.html', miners=miners)
 
-# Панель администратора
+# Админ панель и управление пользователями
 @app.route('/admin')
 def admin_panel():
     if 'username' not in session:
@@ -218,12 +218,14 @@ def admin_panel():
     is_admin = cursor.fetchone()[0]
 
     if is_admin == 1:
-        return render_template('admin.html')
+        cursor.execute("SELECT id, username, is_admin, is_banned FROM users")
+        users = cursor.fetchall()
+        return render_template('admin.html', users=users)
     else:
         return "Доступ запрещен", 403
 
 # Выдать админку
-@app.route('/grant_admin', methods=['GET', 'POST'])
+@app.route('/grant_admin', methods=['POST'])
 def grant_admin():
     if 'username' not in session:
         return redirect('/login')
@@ -233,13 +235,10 @@ def grant_admin():
     is_admin = cursor.fetchone()[0]
 
     if is_admin == 1:
-        if request.method == 'POST':
-            user_to_grant = request.form['username']
-            cursor.execute("UPDATE users SET is_admin = 1 WHERE username = ?", (user_to_grant,))
-            conn.commit()
-            return redirect('/admin')
-        
-        return render_template('grant_admin.html')
+        user_to_grant = request.form['username']
+        cursor.execute("UPDATE users SET is_admin = 1 WHERE username = ?", (user_to_grant,))
+        conn.commit()
+        return redirect('/admin')
     else:
         return "Доступ запрещен", 403
 
@@ -260,6 +259,43 @@ def revoke_admin():
         return redirect('/admin')
     else:
         return "Доступ запрещен", 403
+
+# Забанить пользователя
+@app.route('/ban_user', methods=['POST'])
+def ban_user():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
+    is_admin = cursor.fetchone()[0]
+
+    if is_admin == 1:
+        user_to_ban = request.form['username']
+        cursor.execute("UPDATE users SET is_banned = 1 WHERE username = ?", (user_to_ban,))
+        conn.commit()
+        return redirect('/admin')
+    else:
+        return "Доступ запрещен", 403
+
+# Разбанить пользователя
+@app.route('/unban_user', methods=['POST'])
+def unban_user():
+    if 'username' not in session:
+        return redirect('/login')
+
+    username = session['username']
+    cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
+    is_admin = cursor.fetchone()[0]
+
+    if is_admin == 1:
+        user_to_unban = request.form['username']
+        cursor.execute("UPDATE users SET is_banned = 0 WHERE username = ?", (user_to_unban,))
+        conn.commit()
+        return redirect('/admin')
+    else:
+        return "Доступ запрещен", 403
+        
 
 # Маршрут для отображения списка пользователей
 @app.route('/users', methods=['GET'])
