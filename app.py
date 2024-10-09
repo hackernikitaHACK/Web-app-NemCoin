@@ -164,9 +164,9 @@ def login():
     
 
 # Маршрут для выхода из системы
-@app.route('/logout')
+@app.route('/logout', methods=['GET', 'POST'])
 def logout():
-    session.clear()  # Удаляем всю информацию о сессии
+    session.pop('username', None)
     return redirect('/login')
     
 
