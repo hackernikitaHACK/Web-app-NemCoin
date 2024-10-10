@@ -325,6 +325,20 @@ def unban_user():
     else:
         return "Доступ запрещен", 403
 
+# Маршрут для отображения списка пользователей, отсортированных по токенам и уровню
+@app.route('/users')
+def users():
+    if 'username' not in session:
+        return redirect('/login')
+
+    # Получаем список всех пользователей, сортируя сначала по токенам, затем по уровню
+    cursor.execute("SELECT username, tokens, level FROM users ORDER BY tokens DESC, level DESC")
+    users = cursor.fetchall()
+
+    # Отправляем данные пользователей на страницу для отображения
+    return render_template('users.html', users=users)
+    
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port)
            
