@@ -184,6 +184,7 @@ def get_token():
 
     username = session['username']
 
+    # Получаем текущие данные пользователя
     cursor.execute("SELECT tokens, level, last_mining_time FROM users WHERE username = ?", (username,))
     user_data = cursor.fetchone()
 
@@ -206,9 +207,10 @@ def get_token():
     current_time = int(time.time())
     time_difference = current_time - last_mining_time
 
-    # Проверяем, прошло ли достаточно времени для получения токенов
+    # Проверяем, прошло ли 60 секунд
     if time_difference >= 60:
-        tokens += total_production_rate  # Добавляем токены с майнеров
+        # Добавляем токены с майнеров
+        tokens += total_production_rate
 
         # Проверяем, достаточно ли токенов для повышения уровня
         tokens_needed = tokens_for_next_level(level)
@@ -217,15 +219,16 @@ def get_token():
             level += 1  # Повышаем уровень
             tokens_needed = tokens_for_next_level(level)
 
-        # Обновляем данные пользователя в базе
+        # Обновляем данные пользователя в базе данных
         cursor.execute("UPDATE users SET tokens = ?, level = ?, last_mining_time = ? WHERE username = ?", 
                        (tokens, level, current_time, username))
         conn.commit()
 
-        flash(f'Вы заработали {total_production_rate} токенов с майнеров!')
+        flash(f'Вы заработали {total_production_rate} токенов!')
     else:
-        flash(f'Вы сможете добыть токен через {60 - time_difference} секунд.')
-    
+        remaining_time = 60 - time_difference
+        flash(f'Вы сможете заработать токены через {remaining_time} секунд.')
+
     return redirect('/')
     
     
@@ -383,4 +386,5 @@ def users():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port)
-           
+
+        
