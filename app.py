@@ -51,9 +51,9 @@ conn.commit()
 
 # Добавление майнеров в базу данных (если их ещё нет)
 miners = [
-    ('Basic Miner', 49, 1),
-    ('Advanced Miner', 500, 5),
-    ('Pro Miner', 1000, 10)
+    ('Basic Miner', 49, 5),
+    ('Advanced Miner', 500, 10),
+    ('Pro Miner', 1000, 15)
 ]
 cursor.execute("SELECT COUNT(*) as count FROM miners")
 miner_count = cursor.fetchone()['count']
