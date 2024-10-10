@@ -174,6 +174,7 @@ def login():
 def logout():
     session.pop('username', None)
     return redirect('/login')
+    
 
 # Маршрут для получения токенов
 @app.route('/get_token', methods=['POST'])
@@ -208,8 +209,12 @@ def get_token():
         cursor.execute("UPDATE users SET tokens = ?, level = ?, last_mining_time = ? WHERE username = ?", 
                        (tokens, level, current_time, username))
         conn.commit()
-
+        flash('Вы заработали токен!')
+    else:
+        flash(f'Вы сможете добыть токен через {60 - time_difference} секунд.')
+    
     return redirect('/')
+    
     
 
 # Маршрут для магазина майнеров
