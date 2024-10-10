@@ -97,10 +97,20 @@ def home():
     current_time = int(time.time())
     if current_time - last_mining_time >= 60:
         tokens += total_production_rate
-        cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", (tokens, current_time, username))
+
+        # Проверка, можно ли повысить уровень
+        while tokens >= tokens_needed:
+            tokens -= tokens_needed
+            level += 1
+            tokens_needed = tokens_for_next_level(level)
+
+        # Обновляем данные пользователя
+        cursor.execute("UPDATE users SET tokens = ?, level = ?, last_mining_time = ? WHERE username = ?", 
+                       (tokens, level, current_time, username))
         conn.commit()
 
     return render_template('index.html', tokens=tokens, level=level, tokens_needed=tokens_needed, is_admin=is_admin)
+    
 
 # Маршрут для регистрации
 @app.route('/register', methods=['GET', 'POST'])
@@ -170,24 +180,34 @@ def get_token():
 
     username = session['username']
 
-    cursor.execute("SELECT tokens, last_mining_time FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT tokens, level, last_mining_time FROM users WHERE username = ?", (username,))
     user_data = cursor.fetchone()
 
     if user_data is None:
         return redirect('/login')
 
-    tokens, last_mining_time = user_data['tokens'], user_data['last_mining_time']
+    tokens, level, last_mining_time = user_data['tokens'], user_data['level'], user_data['last_mining_time']
 
     current_time = int(time.time())
     time_difference = current_time - last_mining_time
 
+    # Проверяем, прошло ли достаточно времени для получения токенов
     if time_difference >= 60:
-        tokens += 1
-        cursor.execute("UPDATE users SET tokens = ?, last_mining_time = ? WHERE username = ?", 
-                       (tokens, current_time, username))
+        tokens += 1  # Добавляем токен
+
+        # Проверяем, достаточно ли токенов для повышения уровня
+        tokens_needed = tokens_for_next_level(level)
+        if tokens >= tokens_needed:
+            tokens -= tokens_needed  # Убираем потраченные токены
+            level += 1  # Повышаем уровень
+
+        # Обновляем данные пользователя в базе
+        cursor.execute("UPDATE users SET tokens = ?, level = ?, last_mining_time = ? WHERE username = ?", 
+                       (tokens, level, current_time, username))
         conn.commit()
 
     return redirect('/')
+    
 
 # Маршрут для магазина майнеров
 @app.route('/shop', methods=['GET', 'POST'])
