@@ -64,9 +64,12 @@ if miner_count == 0:
     conn.commit()
 
 # Функция для расчета, сколько токенов нужно для следующего уровня
+# Используем экспоненциальный рост
 def tokens_for_next_level(current_level):
-    return 50 * current_level
-
+    base_tokens = 50  # Начальное количество токенов
+    growth_rate = 1.5  # Коэффициент роста
+    return int(base_tokens * (growth_rate ** (current_level - 1)))
+    
 # Маршрут для главной страницы
 @app.route('/')
 def home():
