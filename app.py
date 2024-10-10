@@ -192,28 +192,42 @@ def get_token():
 
     tokens, level, last_mining_time = user_data['tokens'], user_data['level'], user_data['last_mining_time']
 
+    # Получаем всех майнеров пользователя
+    cursor.execute('''
+        SELECT m.production_rate 
+        FROM user_miners um 
+        JOIN miners m ON um.miner_id = m.id 
+        WHERE um.username = ?
+    ''', (username,))
+    user_miners = cursor.fetchall()
+
+    total_production_rate = sum([miner['production_rate'] for miner in user_miners])
+
     current_time = int(time.time())
     time_difference = current_time - last_mining_time
 
     # Проверяем, прошло ли достаточно времени для получения токенов
     if time_difference >= 60:
-        tokens += 1  # Добавляем токен
+        tokens += total_production_rate  # Добавляем токены с майнеров
 
         # Проверяем, достаточно ли токенов для повышения уровня
         tokens_needed = tokens_for_next_level(level)
-        if tokens >= tokens_needed:
+        while tokens >= tokens_needed:
             tokens -= tokens_needed  # Убираем потраченные токены
             level += 1  # Повышаем уровень
+            tokens_needed = tokens_for_next_level(level)
 
         # Обновляем данные пользователя в базе
         cursor.execute("UPDATE users SET tokens = ?, level = ?, last_mining_time = ? WHERE username = ?", 
                        (tokens, level, current_time, username))
         conn.commit()
-        flash('Вы заработали токен!')
+
+        flash(f'Вы заработали {total_production_rate} токенов с майнеров!')
     else:
         flash(f'Вы сможете добыть токен через {60 - time_difference} секунд.')
     
     return redirect('/')
+    
     
     
 
