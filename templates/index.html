@@ -20,6 +20,10 @@
             <button type="submit" class="button">Выйти</button>  <!-- Кнопка для выхода -->
         </form>
 
+        <form action="/shop" method="GET">
+            <button type="submit" class="button">Магазин Майнероов</button>
+        </form>
+
         <!-- Кнопка для панели администратора, если пользователь — админ -->
         {% if is_admin %}
         <form action="/admin" method="GET">
